@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using DevHabit.Api.Database;
 using DevHabit.Api.Modules.Habits.DTOs;
 using Microsoft.AspNetCore.Mvc;
@@ -14,34 +15,8 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
     {
         List<HabitResponse> habits = await dbContext
             .Habits
-            .Select(h => new HabitResponse
-            {
-                Id = h.Id,
-                Name = h.Name,
-                Description = h.Description,
-                Type = h.Type,
-                Frequency = new FrequencyResponse
-                {
-                    Type = h.Frequency.Type,
-                    TimesPerPeriod = h.Frequency.TimesPerPeriod
-                },
-                Target = new TargetResponse
-                {
-                    Value = h.Target.Value,
-                    Unit = h.Target.Unit
-                },
-                Status = h.Status,
-                IsArchived = h.IsArchived,
-                EndDate = h.EndDate,
-                Milestone = h.Milestone == null ? null : new MilestoneResponse
-                {
-                    Target = h.Milestone.Target,
-                    Current = h.Milestone.Current
-                },
-                CreatedAtUtc = h.CreatedAtUtc,
-                UpdatedAtUtc = h.UpdatedAtUtc,
-                LastCompletedAtUtc = h.LastCompletedAtUtc
-            }).ToListAsync();
+            .Select(HabitQueries.ProjectToHabitResponse())
+            .ToListAsync();
 
         var habitsCollectionResponse = new HabitsCollectionResponse
         {
@@ -57,34 +32,8 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
         HabitResponse? habit = await dbContext
             .Habits
             .Where(h => h.Id == id)
-            .Select(h => new HabitResponse
-            {
-                Id = h.Id,
-                Name = h.Name,
-                Description = h.Description,
-                Type = h.Type,
-                Frequency = new FrequencyResponse
-                {
-                    Type = h.Frequency.Type,
-                    TimesPerPeriod = h.Frequency.TimesPerPeriod
-                },
-                Target = new TargetResponse
-                {
-                    Value = h.Target.Value,
-                    Unit = h.Target.Unit
-                },
-                Status = h.Status,
-                IsArchived = h.IsArchived,
-                EndDate = h.EndDate,
-                Milestone = h.Milestone == null ? null : new MilestoneResponse
-                {
-                    Target = h.Milestone.Target,
-                    Current = h.Milestone.Current
-                },
-                CreatedAtUtc = h.CreatedAtUtc,
-                UpdatedAtUtc = h.UpdatedAtUtc,
-                LastCompletedAtUtc = h.LastCompletedAtUtc
-            }).FirstOrDefaultAsync();
+            .Select(HabitQueries.ProjectToHabitResponse())
+            .FirstOrDefaultAsync();
 
         if (habit is null)
         {
@@ -92,5 +41,19 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
         }
 
         return Ok(habit);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<HabitResponse>> CreateHabit(CreateHabitRequest request)
+    {
+        Habit habit = request.ToEntity();
+
+        dbContext.Habits.Add(habit);
+
+        await dbContext.SaveChangesAsync();
+
+        var response = habit.ToHabitResponse();
+
+        return CreatedAtAction(nameof(GetHabit), new { id = response.Id }, response);
     }
 };
