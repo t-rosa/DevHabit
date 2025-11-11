@@ -35,7 +35,7 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
             .Select(HabitQueries.ProjectToHabitResponse())
             .FirstOrDefaultAsync();
 
-        if (habit is null)
+        if (habit == null)
         {
             return NotFound();
         }
@@ -55,5 +55,22 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
         var response = habit.ToHabitResponse();
 
         return CreatedAtAction(nameof(GetHabit), new { id = response.Id }, response);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<ActionResult<HabitResponse>> UpdateHabit(string id, UpdateHabitRequest request)
+    {
+        Habit? habit = await dbContext.Habits.FirstOrDefaultAsync(h => h.Id == id);
+
+        if (habit == null)
+        {
+            return NotFound();
+        }
+
+        habit.UpdateFromRequest(request);
+
+        await dbContext.SaveChangesAsync();
+
+        return NoContent();
     }
 };

@@ -57,7 +57,7 @@ internal static class HabitMappings
             Status = HabitStatus.Ongoing,
             IsArchived = false,
             EndDate = request.EndDate,
-            Milestone = request.Milestone is not null ? new Milestone
+            Milestone = request.Milestone != null ? new Milestone
             {
                 Target = request.Milestone.Target,
                 Current = 0
@@ -66,5 +66,33 @@ internal static class HabitMappings
         };
 
         return habit;
+    }
+
+    public static void UpdateFromRequest(this Habit habit, UpdateHabitRequest request)
+    {
+        habit.Name = request.Name;
+        habit.Description = request.Description;
+        habit.Type = request.Type;
+        habit.EndDate = request.EndDate;
+
+        habit.Frequency = new Frequency
+        {
+            Type = request.Frequency.Type,
+            TimesPerPeriod = request.Frequency.TimesPerPeriod
+        };
+
+        habit.Target = new Target
+        {
+            Value = request.Target.Value,
+            Unit = request.Target.Unit
+        };
+
+        if (request.Milestone != null)
+        {
+            habit.Milestone ??= new Milestone();
+            habit.Milestone.Target = request.Milestone.Target;
+        }
+
+        habit.UpdatedAtUtc = DateTime.UtcNow;
     }
 }
