@@ -1,7 +1,10 @@
 using DevHabit.Api.Database;
 using DevHabit.Api.Modules.Tags.DTOs;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevHabit.Api.Modules.Tags;
@@ -44,14 +47,23 @@ public sealed class TagsController(ApplicationDbContext db) : ControllerBase
     }
 
     [HttpPost()]
-    public async Task<ActionResult<TagResponse>> CreateTag(CreateTagRequest request)
+    public async Task<ActionResult<TagResponse>> CreateTag(CreateTagRequest request, IValidator<CreateTagRequest> validator, ProblemDetailsFactory problemDetailsFactory)
     {
+        ValidationResult validation = await validator.ValidateAsync(request);
+
+        if (!validation.IsValid)
+        {
+            ProblemDetails problem = problemDetailsFactory.CreateProblemDetails(HttpContext, StatusCodes.Status400BadRequest);
+            problem.Extensions.Add("errors", validation.ToDictionary());
+            return BadRequest(problem);
+        }
+
         Tag tag = request.ToEntity();
 
         // Race condition
         if (await db.Tags.AnyAsync(t => t.Name == tag.Name))
         {
-            return Conflict($"The tag '{tag.Name}' already exists");
+            return Problem(detail: $"The tag '{tag.Name}' already exists", statusCode: StatusCodes.Status409Conflict);
         }
 
         db.Tags.Add(tag);

@@ -1,8 +1,11 @@
 using System.Linq.Expressions;
 using DevHabit.Api.Database;
 using DevHabit.Api.Modules.Habits.DTOs;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevHabit.Api.Modules.Habits;
@@ -45,8 +48,16 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<HabitResponse>> CreateHabit(CreateHabitRequest request)
+    public async Task<ActionResult<HabitResponse>> CreateHabit(CreateHabitRequest request, IValidator<CreateHabitRequest> validator, ProblemDetailsFactory problemDetailsFactory)
     {
+        ValidationResult validation = await validator.ValidateAsync(request);
+        if (!validation.IsValid)
+        {
+            ProblemDetails problem = problemDetailsFactory.CreateProblemDetails(HttpContext, StatusCodes.Status400BadRequest);
+            problem.Extensions.Add("errors", validation.ToDictionary());
+            return BadRequest(problem);
+        }
+
         Habit habit = request.ToEntity();
 
         db.Habits.Add(habit);
