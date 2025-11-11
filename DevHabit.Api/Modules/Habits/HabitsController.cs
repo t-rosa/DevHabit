@@ -58,7 +58,7 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<HabitResponse>> UpdateHabit(string id, UpdateHabitRequest request)
+    public async Task<ActionResult> UpdateHabit(string id, UpdateHabitRequest request)
     {
         Habit? habit = await dbContext.Habits.FirstOrDefaultAsync(h => h.Id == id);
 
