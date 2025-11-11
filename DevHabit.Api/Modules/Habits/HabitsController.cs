@@ -28,12 +28,12 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<HabitResponse>> GetHabit(string id)
+    public async Task<ActionResult<HabitWithTagsResponse>> GetHabit(string id)
     {
-        HabitResponse? habit = await db
+        HabitWithTagsResponse? habit = await db
             .Habits
             .Where(h => h.Id == id)
-            .Select(HabitQueries.ProjectToResponse())
+            .Select(HabitQueries.ProjectToResponseWithTags())
             .FirstOrDefaultAsync();
 
         if (habit == null)
