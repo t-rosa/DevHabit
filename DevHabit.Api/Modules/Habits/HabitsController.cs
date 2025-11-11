@@ -15,12 +15,21 @@ namespace DevHabit.Api.Modules.Habits;
 public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<HabitsCollectionResponse>> GetHabits()
+    public async Task<ActionResult<HabitsCollectionResponse>> GetHabits([FromQuery] HabitsQueryParameters query)
     {
+        query.Search ??= query.Search?.Trim().ToLower();
+
+#pragma warning disable CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
         List<HabitResponse> habits = await db
             .Habits
+            .Where(h => query.Search == null ||
+                h.Name.ToLower().Contains(query.Search) ||
+                h.Description != null && h.Description.ToLower().Contains(query.Search))
+            .Where(h => query.Type == null || h.Type == query.Type)
+            .Where(h => query.Status == null || h.Status == query.Status)
             .Select(HabitQueries.ProjectToResponse())
             .ToListAsync();
+#pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
 
         var habitsCollectionResponse = new HabitsCollectionResponse
         {
