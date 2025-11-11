@@ -9,14 +9,14 @@ namespace DevHabit.Api.Modules.Habits;
 
 [ApiController]
 [Route("habits")]
-public sealed class HabitsController(ApplicationDbContext dbContext) : ControllerBase
+public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<HabitsCollectionResponse>> GetHabits()
     {
-        List<HabitResponse> habits = await dbContext
+        List<HabitResponse> habits = await db
             .Habits
-            .Select(HabitQueries.ProjectToHabitResponse())
+            .Select(HabitQueries.ProjectToResponse())
             .ToListAsync();
 
         var habitsCollectionResponse = new HabitsCollectionResponse
@@ -30,10 +30,10 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
     [HttpGet("{id}")]
     public async Task<ActionResult<HabitResponse>> GetHabit(string id)
     {
-        HabitResponse? habit = await dbContext
+        HabitResponse? habit = await db
             .Habits
             .Where(h => h.Id == id)
-            .Select(HabitQueries.ProjectToHabitResponse())
+            .Select(HabitQueries.ProjectToResponse())
             .FirstOrDefaultAsync();
 
         if (habit == null)
@@ -49,9 +49,9 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
     {
         Habit habit = request.ToEntity();
 
-        dbContext.Habits.Add(habit);
+        db.Habits.Add(habit);
 
-        await dbContext.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var response = habit.ToHabitResponse();
 
@@ -61,7 +61,7 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
     [HttpPut("{id}")]
     public async Task<ActionResult> UpdateHabit(string id, UpdateHabitRequest request)
     {
-        Habit? habit = await dbContext.Habits.FirstOrDefaultAsync(h => h.Id == id);
+        Habit? habit = await db.Habits.FirstOrDefaultAsync(h => h.Id == id);
 
         if (habit == null)
         {
@@ -70,7 +70,7 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
 
         habit.UpdateFromRequest(request);
 
-        await dbContext.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         return NoContent();
     }
@@ -78,7 +78,7 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
     [HttpPatch("{id}")]
     public async Task<ActionResult> PatchHabit(string id, JsonPatchDocument<HabitResponse> patchDocument)
     {
-        Habit? habit = await dbContext.Habits.FirstOrDefaultAsync(h => h.Id == id);
+        Habit? habit = await db.Habits.FirstOrDefaultAsync(h => h.Id == id);
 
         if (habit == null)
         {
@@ -97,7 +97,7 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
         habit.Description = response.Description;
         habit.UpdatedAtUtc = DateTime.UtcNow;
 
-        await dbContext.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         return NoContent();
     }
@@ -105,16 +105,16 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteHabit(string id)
     {
-        Habit? habit = await dbContext.Habits.FirstOrDefaultAsync(h => h.Id == id);
+        Habit? habit = await db.Habits.FirstOrDefaultAsync(h => h.Id == id);
 
         if (habit == null)
         {
             return NotFound();
         }
 
-        dbContext.Habits.Remove(habit);
+        db.Habits.Remove(habit);
 
-        await dbContext.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         return NoContent();
     }

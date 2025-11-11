@@ -5,7 +5,7 @@ namespace DevHabit.Api.Modules.Habits;
 
 internal static class HabitQueries
 {
-    public static Expression<Func<Habit, HabitResponse>> ProjectToHabitResponse()
+    public static Expression<Func<Habit, HabitResponse>> ProjectToResponse()
     {
         return h => new HabitResponse
         {
