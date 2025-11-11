@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using DevHabit.Api.Database;
 using DevHabit.Api.Modules.Habits.DTOs;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -68,6 +69,33 @@ public sealed class HabitsController(ApplicationDbContext dbContext) : Controlle
         }
 
         habit.UpdateFromRequest(request);
+
+        await dbContext.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    [HttpPatch("{id}")]
+    public async Task<ActionResult> PatchHabit(string id, JsonPatchDocument<HabitResponse> patchDocument)
+    {
+        Habit? habit = await dbContext.Habits.FirstOrDefaultAsync(h => h.Id == id);
+
+        if (habit == null)
+        {
+            return NotFound();
+        }
+
+        var response = habit.ToHabitResponse();
+        patchDocument.ApplyTo(response);
+
+        if (!TryValidateModel(ModelState))
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        habit.Name = response.Name;
+        habit.Description = response.Description;
+        habit.UpdatedAtUtc = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
 
