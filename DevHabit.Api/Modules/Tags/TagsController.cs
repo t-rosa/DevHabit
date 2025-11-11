@@ -47,16 +47,9 @@ public sealed class TagsController(ApplicationDbContext db) : ControllerBase
     }
 
     [HttpPost()]
-    public async Task<ActionResult<TagResponse>> CreateTag(CreateTagRequest request, IValidator<CreateTagRequest> validator, ProblemDetailsFactory problemDetailsFactory)
+    public async Task<ActionResult<TagResponse>> CreateTag(CreateTagRequest request, IValidator<CreateTagRequest> validator)
     {
-        ValidationResult validation = await validator.ValidateAsync(request);
-
-        if (!validation.IsValid)
-        {
-            ProblemDetails problem = problemDetailsFactory.CreateProblemDetails(HttpContext, StatusCodes.Status400BadRequest);
-            problem.Extensions.Add("errors", validation.ToDictionary());
-            return BadRequest(problem);
-        }
+        await validator.ValidateAndThrowAsync(request);
 
         Tag tag = request.ToEntity();
 
