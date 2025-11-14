@@ -1,3 +1,4 @@
+using DevHabit.Api.Common;
 using DevHabit.Api.Database;
 using DevHabit.Api.Modules.Tags.DTOs;
 using FluentValidation;
@@ -21,7 +22,7 @@ public sealed class TagsController(ApplicationDbContext db) : ControllerBase
             .Select(TagQueries.ProjectToResponse())
             .ToListAsync();
 
-        var response = new TagsCollectionResponse
+        var response = new PaginationResult<TagResponse>
         {
             Items = tags
         };

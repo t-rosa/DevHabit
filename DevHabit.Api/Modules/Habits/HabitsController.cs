@@ -1,6 +1,7 @@
 using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using DevHabit.Api.Database;
+using DevHabit.Api.Modules.Common;
 using DevHabit.Api.Modules.Habits.DTOs;
 using DevHabit.Api.Services.Sorting;
 using FluentValidation;
@@ -17,7 +18,7 @@ namespace DevHabit.Api.Modules.Habits;
 public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<HabitsCollectionResponse>> GetHabits([FromQuery] HabitsQueryParameters query, SortMappingProvider sortMappingProvider)
+    public async Task<ActionResult<PaginationResult<HabitResponse>>> GetHabits([FromQuery] HabitsQueryParameters query, SortMappingProvider sortMappingProvider)
     {
         if (!sortMappingProvider.ValidateMappings<HabitResponse, Habit>(query.Sort))
         {
@@ -32,7 +33,7 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
         SortMapping[] sortMappings = sortMappingProvider.GetMappings<HabitResponse, Habit>();
 
 #pragma warning disable CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
-        List<HabitResponse> habits = await db
+        IQueryable<HabitResponse> habitsQuery = db
             .Habits
             .Where(h => query.Search == null ||
                 h.Name.ToLower().Contains(query.Search) ||
@@ -40,16 +41,12 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
             .Where(h => query.Type == null || h.Type == query.Type)
             .Where(h => query.Status == null || h.Status == query.Status)
             .ApplySort(query.Sort, sortMappings)
-            .Select(HabitQueries.ProjectToResponse())
-            .ToListAsync();
+            .Select(HabitQueries.ProjectToResponse());
 #pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
 
-        var habitsCollectionResponse = new HabitsCollectionResponse
-        {
-            Items = habits
-        };
+        PaginationResult<HabitResponse> response = await PaginationResult<HabitResponse>.CreateAsync(habitsQuery, query.Page, query.PageSize);
 
-        return Ok(habitsCollectionResponse);
+        return Ok(response);
     }
 
     [HttpGet("{id}")]

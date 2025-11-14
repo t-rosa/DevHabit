@@ -1,10 +1,5 @@
 namespace DevHabit.Api.Modules.Habits.DTOs;
 
-public sealed record HabitsCollectionResponse
-{
-    public List<HabitResponse> Items { get; init; }
-}
-
 public sealed record HabitResponse
 {
     public required string Id { get; init; }
