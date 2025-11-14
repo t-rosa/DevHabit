@@ -1,6 +1,8 @@
+using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using DevHabit.Api.Database;
 using DevHabit.Api.Modules.Habits.DTOs;
+using DevHabit.Api.Services.Sorting;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch;
@@ -15,9 +17,19 @@ namespace DevHabit.Api.Modules.Habits;
 public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<HabitsCollectionResponse>> GetHabits([FromQuery] HabitsQueryParameters query)
+    public async Task<ActionResult<HabitsCollectionResponse>> GetHabits([FromQuery] HabitsQueryParameters query, SortMappingProvider sortMappingProvider)
     {
+        if (!sortMappingProvider.ValidateMappings<HabitResponse, Habit>(query.Sort))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: $"The provided sort parameter isn't valid: '{query.Sort}'"
+            );
+        }
+
         query.Search ??= query.Search?.Trim().ToLower();
+
+        SortMapping[] sortMappings = sortMappingProvider.GetMappings<HabitResponse, Habit>();
 
 #pragma warning disable CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
         List<HabitResponse> habits = await db
@@ -27,6 +39,7 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
                 h.Description != null && h.Description.ToLower().Contains(query.Search))
             .Where(h => query.Type == null || h.Type == query.Type)
             .Where(h => query.Status == null || h.Status == query.Status)
+            .ApplySort(query.Sort, sortMappings)
             .Select(HabitQueries.ProjectToResponse())
             .ToListAsync();
 #pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons

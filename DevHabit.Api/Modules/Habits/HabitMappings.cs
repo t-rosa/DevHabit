@@ -1,9 +1,42 @@
 using DevHabit.Api.Modules.Habits.DTOs;
+using DevHabit.Api.Services.Sorting;
 
 namespace DevHabit.Api.Modules.Habits;
 
 internal static class HabitMappings
 {
+    public static readonly SortMappingDefinition<HabitResponse, Habit> SortMapping = new()
+    {
+        Mappings =
+        [
+            new SortMapping(nameof(HabitResponse.Name), nameof(Habit.Name)),
+            new SortMapping(nameof(HabitResponse.Description), nameof(Habit.Description)),
+            new SortMapping(nameof(HabitResponse.Type), nameof(Habit.Type)),
+            new SortMapping(
+                $"{nameof(HabitResponse.Frequency)}.{nameof(FrequencyResponse.Type)}",
+                $"{nameof(Habit.Frequency)}.{nameof(Frequency.Type)}"
+            ),
+            new SortMapping(
+                $"{nameof(HabitResponse.Frequency)}.{nameof(FrequencyResponse.TimesPerPeriod)}",
+                $"{nameof(Habit.Frequency)}.{nameof(Frequency.TimesPerPeriod)}"
+            ),
+            new SortMapping(
+                $"{nameof(HabitResponse.Target)}.{nameof(TargetResponse.Value)}",
+                $"{nameof(Habit.Target)}.{nameof(Target.Value)}"
+            ),
+            new SortMapping(
+                $"{nameof(HabitResponse.Target)}.{nameof(TargetResponse.Unit)}",
+                $"{nameof(Habit.Target)}.{nameof(Target.Unit)}"
+            ),
+            new SortMapping(nameof(HabitResponse.Status), nameof(Habit.Status)),
+            new SortMapping(nameof(HabitResponse.IsArchived), nameof(Habit.IsArchived)),
+            new SortMapping(nameof(HabitResponse.EndDate), nameof(Habit.EndDate)),
+            new SortMapping(nameof(HabitResponse.CreatedAtUtc), nameof(Habit.CreatedAtUtc)),
+            new SortMapping(nameof(HabitResponse.UpdatedAtUtc), nameof(Habit.UpdatedAtUtc)),
+            new SortMapping(nameof(HabitResponse.LastCompletedAtUtc), nameof(Habit.LastCompletedAtUtc)),
+        ]
+    };
+
     public static HabitResponse ToHabitResponse(this Habit habit)
     {
         return new HabitResponse
