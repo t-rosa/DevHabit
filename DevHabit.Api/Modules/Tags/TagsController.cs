@@ -1,5 +1,5 @@
-using DevHabit.Api.Common;
 using DevHabit.Api.Database;
+using DevHabit.Api.Modules.Common;
 using DevHabit.Api.Modules.Tags.DTOs;
 using FluentValidation;
 using FluentValidation.Results;

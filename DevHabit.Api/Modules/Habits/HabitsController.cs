@@ -1,8 +1,10 @@
+using System.Dynamic;
 using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using DevHabit.Api.Database;
 using DevHabit.Api.Modules.Common;
 using DevHabit.Api.Modules.Habits.DTOs;
+using DevHabit.Api.Services;
 using DevHabit.Api.Services.Sorting;
 using FluentValidation;
 using FluentValidation.Results;
@@ -18,13 +20,21 @@ namespace DevHabit.Api.Modules.Habits;
 public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<PaginationResult<HabitResponse>>> GetHabits([FromQuery] HabitsQueryParameters query, SortMappingProvider sortMappingProvider)
+    public async Task<IActionResult> GetHabits([FromQuery] HabitsQueryParameters query, SortMappingProvider sortMappingProvider, DataShapingService dataShapingService)
     {
         if (!sortMappingProvider.ValidateMappings<HabitResponse, Habit>(query.Sort))
         {
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: $"The provided sort parameter isn't valid: '{query.Sort}'"
+            );
+        }
+
+        if (!dataShapingService.Validate<HabitResponse>(query.Fields))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: $"The provided data shaping fields aren't valid: '{query.Fields}'"
             );
         }
 
@@ -44,14 +54,35 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
             .Select(HabitQueries.ProjectToResponse());
 #pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
 
-        PaginationResult<HabitResponse> response = await PaginationResult<HabitResponse>.CreateAsync(habitsQuery, query.Page, query.PageSize);
+        int totalCount = await habitsQuery.CountAsync();
+
+        List<HabitResponse> habits = await habitsQuery
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync();
+
+        var response = new PaginationResult<ExpandoObject>
+        {
+            Items = dataShapingService.ShapeCollectionData(habits, query.Fields),
+            Page = query.Page,
+            PageSize = query.PageSize,
+            TotalCount = totalCount
+        };
 
         return Ok(response);
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<HabitWithTagsResponse>> GetHabit(string id)
+    public async Task<IActionResult> GetHabit(string id, string? fields, DataShapingService dataShapingService)
     {
+        if (!dataShapingService.Validate<HabitWithTagsResponse>(fields))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: $"The provided data shaping fields aren't valid: '{fields}'"
+            );
+        }
+
         HabitWithTagsResponse? habit = await db
             .Habits
             .Where(h => h.Id == id)
@@ -62,6 +93,8 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
         {
             return NotFound();
         }
+
+        dataShapingService.ShapeData(habit, fields);
 
         return Ok(habit);
     }
