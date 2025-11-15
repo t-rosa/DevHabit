@@ -10,6 +10,8 @@ namespace DevHabit.Api.Modules.HabitTags;
 [Route("habits/{habitId}/tags")]
 public sealed class HabitTagsController(ApplicationDbContext db) : ControllerBase
 {
+    public static readonly string Name = nameof(HabitTagsController).Replace("Controller", string.Empty);
+
     [HttpPut]
     public async Task<ActionResult> UpsertHabitTags(string habitId, UpsertHabitTagRequest request)
     {

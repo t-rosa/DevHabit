@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using DevHabit.Api.Database;
 using DevHabit.Api.Modules.Common;
 using DevHabit.Api.Modules.Habits.DTOs;
+using DevHabit.Api.Modules.HabitTags;
 using DevHabit.Api.Services;
 using DevHabit.Api.Services.Sorting;
 using FluentValidation;
@@ -17,10 +18,13 @@ namespace DevHabit.Api.Modules.Habits;
 
 [ApiController]
 [Route("habits")]
-public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
+public sealed class HabitsController(ApplicationDbContext db, LinkService linkService) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetHabits([FromQuery] HabitsQueryParameters query, SortMappingProvider sortMappingProvider, DataShapingService dataShapingService)
+    public async Task<IActionResult> GetHabits(
+        [FromQuery] HabitsQueryParameters query,
+        SortMappingProvider sortMappingProvider,
+        DataShapingService dataShapingService)
     {
         if (!sortMappingProvider.ValidateMappings<HabitResponse, Habit>(query.Sort))
         {
@@ -63,17 +67,26 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
 
         var response = new PaginationResult<ExpandoObject>
         {
-            Items = dataShapingService.ShapeCollectionData(habits, query.Fields),
+            Items = dataShapingService.ShapeCollectionData(
+                habits,
+                query.Fields,
+                h => CreateLinksForHabit(h.Id, query.Fields)
+            ),
             Page = query.Page,
             PageSize = query.PageSize,
-            TotalCount = totalCount
+            TotalCount = totalCount,
         };
+
+        response.Links = CreateLinksForHabits(query, response.HasNextPage, response.HasPreviousPage);
 
         return Ok(response);
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetHabit(string id, string? fields, DataShapingService dataShapingService)
+    public async Task<IActionResult> GetHabit(
+        string id,
+        string? fields,
+        DataShapingService dataShapingService)
     {
         if (!dataShapingService.Validate<HabitWithTagsResponse>(fields))
         {
@@ -94,9 +107,11 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
             return NotFound();
         }
 
-        dataShapingService.ShapeData(habit, fields);
+        ExpandoObject shapedHabit = dataShapingService.ShapeData(habit, fields);
 
-        return Ok(habit);
+        shapedHabit.TryAdd("links", CreateLinksForHabit(id, fields));
+
+        return Ok(shapedHabit);
     }
 
     [HttpPost]
@@ -111,6 +126,8 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
         await db.SaveChangesAsync();
 
         var response = habit.ToHabitResponse();
+
+        response.Links = CreateLinksForHabit(habit.Id, null);
 
         return CreatedAtAction(nameof(GetHabit), new { id = response.Id }, response);
     }
@@ -174,5 +191,80 @@ public sealed class HabitsController(ApplicationDbContext db) : ControllerBase
         await db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    private List<LinkResponse> CreateLinksForHabits(
+        HabitsQueryParameters query,
+        bool hasNextPage,
+        bool hasPreviousPage
+    )
+    {
+        List<LinkResponse> links = [
+            linkService.Create(nameof(GetHabits), "self", HttpMethods.Get, new
+            {
+                page = query.Page,
+                pageSize = query.PageSize,
+                fields = query.Fields,
+                q = query.Search,
+                sort = query.Sort,
+                type = query.Type,
+                status = query.Status
+            }),
+
+            linkService.Create(nameof(CreateHabit), "create", HttpMethods.Post)
+        ];
+
+        if (hasNextPage)
+        {
+            links.Add(
+            linkService.Create(nameof(GetHabits), "next-page", HttpMethods.Get, new
+            {
+                page = query.Page + 1,
+                pageSize = query.PageSize,
+                fields = query.Fields,
+                q = query.Search,
+                sort = query.Sort,
+                type = query.Type,
+                status = query.Status
+            })
+            );
+        }
+
+        if (hasPreviousPage)
+        {
+            links.Add(
+            linkService.Create(nameof(GetHabits), "previous-page", HttpMethods.Get, new
+            {
+                page = query.Page - 1,
+                pageSize = query.PageSize,
+                fields = query.Fields,
+                q = query.Search,
+                sort = query.Sort,
+                type = query.Type,
+                status = query.Status
+            })
+            );
+        }
+
+        return links;
+    }
+
+    private List<LinkResponse> CreateLinksForHabit(string id, string? fields)
+    {
+        List<LinkResponse> links = [
+            linkService.Create(nameof(GetHabit), "self", HttpMethods.Get, new { id, fields }),
+            linkService.Create(nameof(UpdateHabit), "update", HttpMethods.Put, new { id }),
+            linkService.Create(nameof(UpdateHabit), "patch", HttpMethods.Patch, new { id }),
+            linkService.Create(nameof(UpdateHabit), "delete", HttpMethods.Delete, new { id }),
+            linkService.Create(
+                nameof(HabitTagsController.UpsertHabitTags),
+                "upsert-tags",
+                HttpMethods.Put,
+                new { habitId = id },
+                HabitTagsController.Name
+            ),
+        ];
+
+        return links;
     }
 };

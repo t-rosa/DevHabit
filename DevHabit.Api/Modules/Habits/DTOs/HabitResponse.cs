@@ -1,3 +1,5 @@
+using DevHabit.Api.Modules.Common;
+
 namespace DevHabit.Api.Modules.Habits.DTOs;
 
 public sealed record HabitResponse
@@ -15,6 +17,7 @@ public sealed record HabitResponse
     public required DateTime CreatedAtUtc { get; init; }
     public DateTime? UpdatedAtUtc { get; init; }
     public DateTime? LastCompletedAtUtc { get; init; }
+    public List<LinkResponse> Links { get; set; }
 }
 
 public sealed record FrequencyResponse

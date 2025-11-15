@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DevHabit.Api.Modules.Common;
 
-public sealed record PaginationResult<T> : ICollectionResponse<T>
+public sealed record PaginationResult<T> : ICollectionResponse<T>, ILinksResponse
 {
     public List<T> Items { get; init; }
     public int Page { get; init; }
@@ -12,6 +12,7 @@ public sealed record PaginationResult<T> : ICollectionResponse<T>
     public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
     public bool HasPreviousPage => Page > 1;
     public bool HasNextPage => Page < TotalPages;
+    public List<LinkResponse> Links { get; set; }
 
     public static async Task<PaginationResult<T>> CreateAsync(IQueryable<T> query, int page, int pageSize)
     {

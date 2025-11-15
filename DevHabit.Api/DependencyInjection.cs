@@ -91,12 +91,16 @@ public static class DependencyInjection
         public WebApplicationBuilder AddApplicationServices()
         {
             builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
             builder.Services.AddTransient<SortMappingProvider>();
             builder.Services.AddSingleton<ISortMappingDefinition, SortMappingDefinition<HabitResponse, Habit>>(_ => HabitMappings.SortMapping);
+
             builder.Services.AddTransient<DataShapingService>();
+
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddTransient<LinkService>();
 
             return builder;
         }
-
     }
 }
