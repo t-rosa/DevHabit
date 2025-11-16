@@ -228,32 +228,32 @@ public sealed class HabitsController(ApplicationDbContext db, LinkService linkSe
         if (hasNextPage)
         {
             links.Add(
-            linkService.Create(nameof(GetHabits), "next-page", HttpMethods.Get, new
-            {
-                page = query.Page + 1,
-                pageSize = query.PageSize,
-                fields = query.Fields,
-                q = query.Search,
-                sort = query.Sort,
-                type = query.Type,
-                status = query.Status
-            })
+                linkService.Create(nameof(GetHabits), "next-page", HttpMethods.Get, new
+                {
+                    page = query.Page + 1,
+                    pageSize = query.PageSize,
+                    fields = query.Fields,
+                    q = query.Search,
+                    sort = query.Sort,
+                    type = query.Type,
+                    status = query.Status
+                })
             );
         }
 
         if (hasPreviousPage)
         {
             links.Add(
-            linkService.Create(nameof(GetHabits), "previous-page", HttpMethods.Get, new
-            {
-                page = query.Page - 1,
-                pageSize = query.PageSize,
-                fields = query.Fields,
-                q = query.Search,
-                sort = query.Sort,
-                type = query.Type,
-                status = query.Status
-            })
+                linkService.Create(nameof(GetHabits), "previous-page", HttpMethods.Get, new
+                {
+                    page = query.Page - 1,
+                    pageSize = query.PageSize,
+                    fields = query.Fields,
+                    q = query.Search,
+                    sort = query.Sort,
+                    type = query.Type,
+                    status = query.Status
+                })
             );
         }
 
