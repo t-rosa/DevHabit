@@ -20,6 +20,10 @@ namespace DevHabit.Api.Modules.Habits;
 
 [ApiController]
 [Route("habits")]
+[Produces(
+    MediaTypeNames.Application.Json,
+    CustomMediaTypeNames.Application.HateoasJson
+)]
 public sealed class HabitsController(ApplicationDbContext db, LinkService linkService) : ControllerBase
 {
     [HttpGet]
@@ -67,20 +71,18 @@ public sealed class HabitsController(ApplicationDbContext db, LinkService linkSe
             .Take(query.PageSize)
             .ToListAsync();
 
-        bool includeLinks = query.Accept == CustomMediaTypeNames.Application.HateoasJson;
-
         var response = new PaginationResult<ExpandoObject>
         {
             Items = dataShapingService.ShapeCollectionData(
                 habits,
                 query.Fields,
-                includeLinks ? h => CreateLinksForHabit(h.Id, query.Fields) : null),
+                query.IncludeLinks ? h => CreateLinksForHabit(h.Id, query.Fields) : null),
             Page = query.Page,
             PageSize = query.PageSize,
             TotalCount = totalCount,
         };
 
-        if (includeLinks)
+        if (query.IncludeLinks)
         {
             response.Links = CreateLinksForHabits(query, response.HasNextPage, response.HasPreviousPage);
         }
@@ -91,16 +93,14 @@ public sealed class HabitsController(ApplicationDbContext db, LinkService linkSe
     [HttpGet("{id}")]
     public async Task<IActionResult> GetHabit(
         string id,
-        string? fields,
-        [FromHeader(Name="Accept")]
-        string? accept,
+        [FromQuery] HabitQueryParameters query,
         DataShapingService dataShapingService)
     {
-        if (!dataShapingService.Validate<HabitWithTagsResponse>(fields))
+        if (!dataShapingService.Validate<HabitWithTagsResponse>(query.Fields))
         {
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
-                detail: $"The provided data shaping fields aren't valid: '{fields}'"
+                detail: $"The provided data shaping fields aren't valid: '{query.Fields}'"
             );
         }
 
@@ -115,11 +115,11 @@ public sealed class HabitsController(ApplicationDbContext db, LinkService linkSe
             return NotFound();
         }
 
-        ExpandoObject shapedHabit = dataShapingService.ShapeData(habit, fields);
+        ExpandoObject shapedHabit = dataShapingService.ShapeData(habit, query.Fields);
 
-        if (accept == CustomMediaTypeNames.Application.HateoasJson)
+        if (query.IncludeLinks)
         {
-            shapedHabit.TryAdd("links", CreateLinksForHabit(id, fields));
+            shapedHabit.TryAdd("links", CreateLinksForHabit(id, query.Fields));
         }
 
         return Ok(shapedHabit);
