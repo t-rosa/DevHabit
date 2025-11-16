@@ -20,10 +20,6 @@ namespace DevHabit.Api.Modules.Habits;
 
 [ApiController]
 [Route("habits")]
-[Produces(
-    MediaTypeNames.Application.Json,
-    CustomMediaTypeNames.Application.HateoasJson
-)]
 public sealed class HabitsController(ApplicationDbContext db, LinkService linkService) : ControllerBase
 {
     [HttpGet]
